@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Toggle } from '@/components/ui/toggle';
 import { cn } from '@/lib/utils';
 import { DAY_LABELS, ROUTINE_COLORS } from '@/lib/dateUtils';
 

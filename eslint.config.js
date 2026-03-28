@@ -34,6 +34,9 @@ export default [
       "react-hooks": pluginReactHooks,
       "unused-imports": pluginUnusedImports,
     },
+    extends: [
+      prettierRecommended
+    ],
     rules: {
       "no-unused-vars": "off",
       "react/jsx-uses-vars": "error",

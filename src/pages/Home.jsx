@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import { addDays } from 'date-fns';
 import { formatDate } from '@/lib/dateUtils';
 import MonthCalendar from '@/components/home/MonthCalendar';
@@ -16,19 +16,19 @@ export default function Home() {
   // Fetch all tasks
   const { data: allTasks = [] } = useQuery({
     queryKey: ['tasks'],
-    queryFn: () => base44.entities.Task.list('-date', 500),
+    queryFn: () => localClient.entities.Task.list('-date', 500),
   });
 
   // Fetch routines
   const { data: routines = [] } = useQuery({
     queryKey: ['routines'],
-    queryFn: () => base44.entities.Routine.list(),
+    queryFn: () => localClient.entities.Routine.list(),
   });
 
   // Fetch daily logs
   const { data: dailyLogs = [] } = useQuery({
     queryKey: ['dailyLogs'],
-    queryFn: () => base44.entities.DailyLog.list('-date', 100),
+    queryFn: () => localClient.entities.DailyLog.list('-date', 100),
   });
 
   // Tasks for selected date
@@ -64,7 +64,7 @@ export default function Home() {
       // Delete existing tasks for this date
       const existing = allTasks.filter(t => t.date === date);
       for (const t of existing) {
-        await base44.entities.Task.delete(t.id);
+        await localClient.entities.Task.delete(t.id);
       }
       // Create new tasks (skip routine items, they come from the Routine entity)
       const newTasks = schedule
@@ -81,7 +81,7 @@ export default function Home() {
           order: idx,
         }));
       if (newTasks.length > 0) {
-        await base44.entities.Task.bulkCreate(newTasks);
+        await localClient.entities.Task.bulkCreate(newTasks);
       }
     },
     onSuccess: () => {
@@ -90,7 +90,7 @@ export default function Home() {
   });
 
   const updateTaskMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Task.update(id, data),
+    mutationFn: ({ id, data }) => localClient.entities.Task.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
     },
@@ -109,9 +109,9 @@ export default function Home() {
         total_count: data.totalCount,
       };
       if (existing) {
-        await base44.entities.DailyLog.update(existing.id, logData);
+        await localClient.entities.DailyLog.update(existing.id, logData);
       } else {
-        await base44.entities.DailyLog.create(logData);
+        await localClient.entities.DailyLog.create(logData);
       }
 
       // Carry over tasks to next day
@@ -127,11 +127,11 @@ export default function Home() {
             status: 'pending',
           }));
         if (carryTasks.length > 0) {
-          await base44.entities.Task.bulkCreate(carryTasks);
+          await localClient.entities.Task.bulkCreate(carryTasks);
         }
         // Mark original tasks as carried over
         for (const id of data.carryOverIds) {
-          await base44.entities.Task.update(id, { status: 'carried_over' });
+          await localClient.entities.Task.update(id, { status: 'carried_over' });
         }
       }
     },

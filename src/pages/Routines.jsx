@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { localClient } from '@/api/localClient';
 import RoutineWeekTable from '@/components/routines/RoutineWeekTable';
 import RoutineInputPanel from '@/components/routines/RoutineInputPanel';
 
@@ -11,16 +11,16 @@ export default function Routines() {
 
   const { data: routines = [] } = useQuery({
     queryKey: ['routines'],
-    queryFn: () => base44.entities.Routine.list(),
+    queryFn: () => localClient.entities.Routine.list(),
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Routine.create(data),
+    mutationFn: (data) => localClient.entities.Routine.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['routines'] }),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Routine.update(id, data),
+    mutationFn: ({ id, data }) => localClient.entities.Routine.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['routines'] });
       setEditingRoutine(null);
@@ -28,7 +28,7 @@ export default function Routines() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Routine.delete(id),
+    mutationFn: (id) => localClient.entities.Routine.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['routines'] });
       if (editingRoutine) setEditingRoutine(null);

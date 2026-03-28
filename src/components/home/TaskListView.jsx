@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Plus, Clock, FileText, GripVertical, Trash2, X } from 'lucide-react';
+import { Plus, Clock, FileText, GripVertical, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 function TaskAddPopover({ onAdd }) {

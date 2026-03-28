@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Check, ArrowRight, CalendarDays } from 'lucide-react';
-import { timeToMinutes, isPastDate, isToday as checkIsToday } from '@/lib/dateUtils';
+import { timeToMinutes, isToday as checkIsToday } from '@/lib/dateUtils';
 
 const HOUR_HEIGHT = 56;
 const START_HOUR = 6;

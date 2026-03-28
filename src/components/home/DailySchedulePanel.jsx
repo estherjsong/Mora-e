@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, Edit3, Moon, CalendarDays } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { formatDisplayDate, isPastDate, isToday as checkIsToday, formatDate } from '@/lib/dateUtils';
 import ScheduleTimeline from './ScheduleTimeline';
 import TaskListView from './TaskListView';
