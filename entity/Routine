@@ -1,0 +1,49 @@
+{
+  "name": "Routine",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Routine name"
+    },
+    "days": {
+      "type": "array",
+      "description": "Days of week (0=Sun, 1=Mon, ... 6=Sat)",
+      "items": {
+        "type": "number"
+      }
+    },
+    "start_time": {
+      "type": "string",
+      "description": "Start time HH:mm"
+    },
+    "end_time": {
+      "type": "string",
+      "description": "End time HH:mm"
+    },
+    "color": {
+      "type": "string",
+      "description": "Display color for the routine"
+    }
+  },
+  "required": [
+    "title",
+    "days",
+    "start_time",
+    "end_time"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "name": "Task",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Task name"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date for this task"
+    },
+    "estimated_minutes": {
+      "type": "number",
+      "description": "AI-estimated or user-set duration in minutes"
+    },
+    "start_time": {
+      "type": "string",
+      "description": "Scheduled start time HH:mm"
+    },
+    "end_time": {
+      "type": "string",
+      "description": "Scheduled end time HH:mm"
+    },
+    "memo": {
+      "type": "string",
+      "description": "Optional memo"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "in_progress",
+        "completed",
+        "incomplete",
+        "carried_over"
+      ],
+      "default": "pending"
+    },
+    "progress": {
+      "type": "number",
+      "description": "Progress percentage 0-100"
+    },
+    "schedule_id": {
+      "type": "string",
+      "description": "Which schedule this task belongs to"
+    },
+    "is_google_calendar": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this is imported from Google Calendar"
+    },
+    "order": {
+      "type": "number",
+      "description": "Order in the schedule"
+    }
+  },
+  "required": [
+    "title",
+    "date"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "name": "Schedule",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date for this schedule"
+    },
+    "is_selected": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this schedule is the chosen one for the day"
+    },
+    "tasks_snapshot": {
+      "type": "array",
+      "description": "Snapshot of tasks with times",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "start_time": {
+            "type": "string"
+          },
+          "end_time": {
+            "type": "string"
+          },
+          "estimated_minutes": {
+            "type": "number"
+          },
+          "memo": {
+            "type": "string"
+          },
+          "is_google_calendar": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "date"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

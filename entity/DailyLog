@@ -1,0 +1,48 @@
+{
+  "name": "DailyLog",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the log"
+    },
+    "mood": {
+      "type": "string",
+      "description": "Mood emoji/icon"
+    },
+    "diary": {
+      "type": "string",
+      "description": "Short diary entry"
+    },
+    "summary": {
+      "type": "string",
+      "description": "AI-generated daily summary"
+    },
+    "completed_count": {
+      "type": "number",
+      "description": "Number of completed tasks"
+    },
+    "total_count": {
+      "type": "number",
+      "description": "Total number of tasks"
+    }
+  },
+  "required": [
+    "date"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
