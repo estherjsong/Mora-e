@@ -1,0 +1,36 @@
+type User @table {
+  displayName: String!
+  createdAt: Timestamp!
+  email: String
+  photoUrl: String
+  aiPreferences: String
+}
+
+type Task @table {
+  title: String!
+  status: String!
+  createdAt: Timestamp!
+  description: String
+  dueDate: Timestamp
+  priority: String
+  aiSuggestedDueDate: Timestamp
+  aiSuggestedPriority: String
+  user: User
+  category: Category
+}
+
+type Category @table {
+  name: String!
+  createdAt: Timestamp!
+  description: String
+  color: String
+  user: User
+}
+
+type Reminder @table {
+  remindAt: Timestamp!
+  method: String!
+  createdAt: Timestamp!
+  message: String
+  task: Task
+}
