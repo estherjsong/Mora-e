@@ -22,8 +22,11 @@ export default function DailySchedulePanel({
   onFinishDay,
   allTasks,
   onNavigateDate,
+  mode,
+  setMode,
+  drafts,
+  setDrafts,
 }) {
-  const [mode, setMode] = useState('schedule'); // 'schedule' | 'edit' | 'carousel'
   const [editTasks, setEditTasks] = useState([]);
   const [scheduleOptions, setScheduleOptions] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -57,9 +60,25 @@ export default function DailySchedulePanel({
       setMode('schedule');
     } else {
       setMode('edit');
-      setEditTasks(tasks.length > 0 ? tasks.map(t => ({ ...t })) : []);
+      if (drafts[dateStr]) {
+        setEditTasks(drafts[dateStr]);
+      } else {
+        setEditTasks(tasks.length > 0 ? tasks.map(t => ({ ...t })) : []);
+      }
     }
   }, [dateStr]);
+
+  // 편집 중인 태스크를 업데이트할 때마다 drafts(임시 저장)에도 동기화합니다.
+  const handleSetEditTasks = (action) => {
+    setEditTasks(prev => {
+      const nextTasks = typeof action === 'function' ? action(prev) : action;
+      setDrafts(prevDrafts => ({
+        ...prevDrafts,
+        [dateStr]: nextTasks
+      }));
+      return nextTasks;
+    });
+  };
 
   // Today notification timer
   useEffect(() => {
@@ -93,10 +112,11 @@ export default function DailySchedulePanel({
   }, [isToday, hasSchedule, tasks, notification]);
 
   const handleSwitchToEdit = () => {
-    setEditTasks(tasks.map(t => ({
-      ...t,
-      // Strip schedule info for re-editing
-    })));
+    if (drafts[dateStr]) {
+      setEditTasks(drafts[dateStr]);
+    } else {
+      setEditTasks(tasks.map(t => ({ ...t })));
+    }
     setMode('edit');
   };
 
@@ -127,6 +147,12 @@ export default function DailySchedulePanel({
 
   const handleSave = (chosenSchedule) => {
     onSaveSchedule(dateStr, chosenSchedule);
+    // 시간표가 무사히 저장되면 임시 저장본(Draft) 삭제
+    setDrafts(prev => {
+      const newDrafts = { ...prev };
+      delete newDrafts[dateStr];
+      return newDrafts;
+    });
     setMode('schedule');
   };
 
@@ -252,7 +278,7 @@ export default function DailySchedulePanel({
       {!isGenerating && mode === 'edit' && (
         <TaskListView
           tasks={editTasks}
-          setTasks={setEditTasks}
+          setTasks={handleSetEditTasks}
           onGenerate={handleGenerate}
           onCancel={handleCancelEdit}
           hasExistingSchedule={hasSchedule}

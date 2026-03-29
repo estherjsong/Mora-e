@@ -5,10 +5,24 @@ import { addDays } from 'date-fns';
 import { formatDate } from '@/lib/dateUtils';
 import MonthCalendar from '@/components/home/MonthCalendar';
 import DailySchedulePanel from '@/components/home/DailySchedulePanel';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export default function Home() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [panelMode, setPanelMode] = useState('schedule');
+  const [drafts, setDrafts] = useState({});
+  const [showLeaveAlert, setShowLeaveAlert] = useState(false);
+  const [pendingDate, setPendingDate] = useState(null);
   const queryClient = useQueryClient();
 
   const dateStr = formatDate(selectedDate);
@@ -154,7 +168,21 @@ export default function Home() {
   };
 
   const handleNavigateDate = (date) => {
+    if (panelMode === 'carousel') {
+      setPendingDate(date);
+      setShowLeaveAlert(true);
+      return;
+    }
     setSelectedDate(date);
+  };
+
+  const confirmLeave = () => {
+    setPanelMode('schedule');
+    if (pendingDate) {
+      setSelectedDate(pendingDate);
+    }
+    setShowLeaveAlert(false);
+    setPendingDate(null);
   };
 
   return (
@@ -165,7 +193,7 @@ export default function Home() {
           currentMonth={currentMonth}
           setCurrentMonth={setCurrentMonth}
           selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
+          onSelectDate={handleNavigateDate}
           taskCountsByDate={taskCountsByDate}
           dailyLogs={dailyLogsByDate}
         />
@@ -186,8 +214,29 @@ export default function Home() {
           onFinishDay={handleFinishDay}
           allTasks={allTasks}
           onNavigateDate={handleNavigateDate}
+          mode={panelMode}
+          setMode={setPanelMode}
+          drafts={drafts}
+          setDrafts={setDrafts}
         />
       </div>
+
+      {/* 날짜 이동 확인 커스텀 다이얼로그 */}
+      <AlertDialog open={showLeaveAlert} onOpenChange={setShowLeaveAlert}>
+        <AlertDialogContent className="rounded-2xl max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl">앗, 잠시만요! 🛑</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm leading-relaxed mt-2">
+              시간표가 아직 저장되지 않았어요. 다른 날짜로 이동하시겠습니까?<br /><br />
+              (생성된 시간표 옵션은 사라지지만, 입력한 태스크 목록은 임시저장됩니다.)
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-4">
+            <AlertDialogCancel className="rounded-xl">머무르기</AlertDialogCancel>
+            <AlertDialogAction className="rounded-xl" onClick={confirmLeave}>이동하기</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,6 +9,18 @@ import { cn } from '@/lib/utils';
 function TaskAddPopover({ onAdd }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ title: '', estimated_minutes: '', start_time: '', memo: '' });
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+      if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        setOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleAdd = () => {
     if (!form.title.trim()) return;
@@ -27,7 +39,7 @@ function TaskAddPopover({ onAdd }) {
       <PopoverTrigger asChild>
         <Button variant="outline" className="w-full border-dashed border-2 text-muted-foreground hover:text-foreground hover:border-primary/40 transition-all">
           <Plus className="w-4 h-4 mr-2" />
-          태스크 추가
+          태스크 추가 (단축키: T)
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-4 space-y-3" align="start">
@@ -35,6 +47,12 @@ function TaskAddPopover({ onAdd }) {
           placeholder="태스크 이름 *"
           value={form.title}
           onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
+          onKeyDown={e => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              handleAdd();
+            }
+          }}
           autoFocus
         />
         <div className="flex gap-2">
@@ -45,6 +63,12 @@ function TaskAddPopover({ onAdd }) {
               placeholder="60"
               value={form.estimated_minutes}
               onChange={e => setForm(p => ({ ...p, estimated_minutes: e.target.value }))}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAdd();
+                }
+              }}
             />
           </div>
           <div className="flex-1">
@@ -53,6 +77,12 @@ function TaskAddPopover({ onAdd }) {
               type="time"
               value={form.start_time}
               onChange={e => setForm(p => ({ ...p, start_time: e.target.value }))}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAdd();
+                }
+              }}
             />
           </div>
         </div>
@@ -95,6 +125,12 @@ function TaskEditPopover({ task, onSave, onClose }) {
         placeholder="태스크 이름"
         value={form.title}
         onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
+        onKeyDown={e => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            handleSave();
+          }
+        }}
       />
       <div className="flex gap-2">
         <div className="flex-1">
@@ -103,6 +139,12 @@ function TaskEditPopover({ task, onSave, onClose }) {
             type="number"
             value={form.estimated_minutes}
             onChange={e => setForm(p => ({ ...p, estimated_minutes: e.target.value }))}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSave();
+              }
+            }}
           />
         </div>
         <div className="flex-1">
@@ -111,6 +153,12 @@ function TaskEditPopover({ task, onSave, onClose }) {
             type="time"
             value={form.start_time}
             onChange={e => setForm(p => ({ ...p, start_time: e.target.value }))}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSave();
+              }
+            }}
           />
         </div>
       </div>
