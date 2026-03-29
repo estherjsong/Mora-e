@@ -4,106 +4,236 @@ import {
   heuristicDaySummary,
 } from '@/lib/scheduleHeuristics';
 
-async function invokeOpenAIJson(systemPrompt, userPrompt) {
-  const key = import.meta.env.VITE_OPENAI_API_KEY;
+/* =========================
+   🧠 Gemini 호출 (structured output)
+========================= */
+async function invokeGeminiJson(systemPrompt, userPrompt, schema) {
+  const key = import.meta.env.VITE_GEMINI_API_KEY;
   if (!key?.trim()) return null;
 
-  const model = import.meta.env.VITE_OPENAI_MODEL || 'gpt-4o-mini';
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+  const model = 'gemini-2.5-flash-lite';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+
+  const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
+
+  const res = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${key}`,
     },
     body: JSON.stringify({
-      model,
-      temperature: 0.6,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: fullPrompt }],
+        },
       ],
+      generationConfig: {
+        temperature: 0.6,
+        response_mime_type: 'application/json',
+        response_schema: schema,
+      },
     }),
   });
 
   if (!res.ok) {
     const err = await res.text();
-    console.warn('[scheduleAI] OpenAI error:', res.status, err);
+    console.warn('[Gemini error]', res.status, err);
     return null;
   }
 
   const data = await res.json();
-  const text = data.choices?.[0]?.message?.content;
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
   if (!text) return null;
+
   try {
     return JSON.parse(text);
-  } catch {
-    console.warn('[scheduleAI] Invalid JSON from model');
+  } catch (e) {
+    console.warn('[Invalid JSON]', e, text);
     return null;
   }
 }
 
-export async function generateScheduleOptions(tasks, routines, selectedDate, existingTasks) {
+/* =========================
+   📦 Schema 정의
+========================= */
+const scheduleSchema = {
+  type: 'object',
+  properties: {
+    options: {
+      type: 'array',
+      items: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            start_time: { type: 'string' },
+            end_time: { type: 'string' },
+            estimated_minutes: { type: 'number' },
+            memo: { type: 'string' },
+            is_routine: { type: 'boolean' },
+            is_google_calendar: { type: 'boolean' },
+          },
+          required: ['title', 'start_time', 'end_time'],
+        },
+      },
+    },
+  },
+  required: ['options'],
+};
+
+const rescheduleSchema = {
+  type: 'object',
+  properties: {
+    options: {
+      type: 'array',
+      items: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            start_time: { type: 'string' },
+            end_time: { type: 'string' },
+            estimated_minutes: { type: 'number' },
+            is_routine: { type: 'boolean' },
+            status: { type: 'string' },
+          },
+          required: ['title', 'start_time', 'end_time'],
+        },
+      },
+    },
+  },
+  required: ['options'],
+};
+
+const summarySchema = {
+  type: 'object',
+  properties: {
+    summary: { type: 'string' },
+  },
+  required: ['summary'],
+};
+
+/* =========================
+   🛠️ 시간 처리 유틸
+========================= */
+function toMinutes(t) {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function toTime(m) {
+  const h = String(Math.floor(m / 60)).padStart(2, '0');
+  const min = String(m % 60).padStart(2, '0');
+  return `${h}:${min}`;
+}
+
+/* =========================
+   🚨 겹침 제거 + 정렬 + 보정
+========================= */
+function normalizeSchedule(option) {
+  if (!Array.isArray(option)) return [];
+
+  // 1. 정렬
+  const sorted = [...option].sort(
+    (a, b) => toMinutes(a.start_time) - toMinutes(b.start_time)
+  );
+
+  const result = [];
+  let currentEnd = 360; // 06:00
+
+  for (const task of sorted) {
+    let start = Math.max(toMinutes(task.start_time), currentEnd);
+    let end = toMinutes(task.end_time);
+
+    // duration 없으면 계산
+    if (!task.estimated_minutes) {
+      task.estimated_minutes = Math.max(end - start, 30);
+    }
+
+    // end 보정
+    end = start + task.estimated_minutes;
+
+    // 하루 범위 제한
+    if (start < 360) start = 360;
+    if (end > 1440) end = 1440;
+
+    if (end <= start) continue;
+
+    result.push({
+      ...task,
+      start_time: toTime(start),
+      end_time: toTime(end),
+    });
+
+    currentEnd = end;
+  }
+
+  return result;
+}
+
+/* =========================
+   📅 일정 생성
+========================= */
+export async function generateScheduleOptions(
+  tasks,
+  routines,
+  selectedDate,
+  existingTasks
+) {
   const dayOfWeek = new Date(selectedDate).getDay();
 
-  const dayRoutines = routines.filter((r) => r.days?.includes(dayOfWeek));
+  const dayRoutines = routines.filter((r) =>
+    r.days?.includes(dayOfWeek)
+  );
+
   const routineInfo =
     dayRoutines.map((r) => `${r.title}: ${r.start_time}~${r.end_time}`).join('\n') || '없음';
 
   const taskInfo = tasks
     .map((t) => {
       let info = t.title;
-      if (t.estimated_minutes) info += ` (예상 ${t.estimated_minutes}분)`;
-      if (t.start_time) info += ` (시작시간 ${t.start_time})`;
-      if (t.memo) info += ` [메모: ${t.memo}]`;
+      if (t.estimated_minutes) info += ` (${t.estimated_minutes}분)`;
+      if (t.start_time) info += ` (시작 ${t.start_time})`;
       return info;
     })
     .join('\n');
 
-  const previousTasksInfo =
-    existingTasks.length > 0
-      ? existingTasks.map((t) => `${t.title}: ${t.estimated_minutes || '?'}분`).join('\n')
-      : '';
+  const userPrompt = `
+하루 일정 생성.
 
-  const userPrompt = `당신은 일정 관리 AI입니다. 사용자의 태스크를 하루 시간표로 배치해주세요.
-
-날짜: ${selectedDate}
-요일: ${['일', '월', '화', '수', '목', '금', '토'][dayOfWeek]}요일
-
-고정 루틴 (이 시간은 비워둬야 합니다):
+[루틴]
 ${routineInfo}
 
-오늘 할 태스크:
+[태스크]
 ${taskInfo}
 
-${previousTasksInfo ? `이전 기록 참고:\n${previousTasksInfo}` : ''}
-
 규칙:
-1. 각 태스크의 예상 소요 시간을 맥락에 맞게 추정 (사용자가 입력하지 않은 경우)
-2. 루틴 시간대는 반드시 피할 것
-3. 맥락 고려 (가사/업무/취미 등)
-4. 6:00~24:00 사이
-5. 사용자가 시작시간을 지정한 태스크는 그 시간에 배치
-6. 3개의 서로 다른 시간표 옵션 (options[0], options[1], options[2])
+- 시간 겹치면 안됨
+- 06:00~24:00
+- 루틴 피하기
+- 3개의 옵션 생성
+`;
 
-각 태스크 항목에 start_time, end_time, estimated_minutes 포함.
-루틴 항목은 is_routine: true.
-
-반드시 이 JSON 형식만 출력:
-{"options":[[{"title":"","start_time":"HH:MM","end_time":"HH:MM","estimated_minutes":0,"memo":"","is_routine":false,"is_google_calendar":false}],[],[]]}`;
-
-  const parsed = await invokeOpenAIJson(
-    'You output only valid JSON matching the user instructions. Korean context.',
-    userPrompt
+  const parsed = await invokeGeminiJson(
+    'Return strict JSON.',
+    userPrompt,
+    scheduleSchema
   );
 
   if (parsed?.options?.length >= 3) {
-    return parsed.options;
+    return parsed.options.map(normalizeSchedule);
   }
 
   return heuristicScheduleOptions(tasks, routines, selectedDate, existingTasks);
 }
 
+/* =========================
+   🔁 재스케줄링
+========================= */
 export async function generateRescheduledOptions(
   tasks,
   completedTask,
@@ -111,43 +241,33 @@ export async function generateRescheduledOptions(
   routines,
   selectedDate
 ) {
-  const dayOfWeek = new Date(selectedDate).getDay();
-  const dayRoutines = routines.filter((r) => r.days?.includes(dayOfWeek));
-
   const now = new Date();
-  const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(
+    now.getMinutes()
+  ).padStart(2, '0')}`;
 
   const taskInfo = tasks
-    .map((t) => {
-      let status = '';
-      if (t.id === completedTask.id) status = ` (진행률: ${progress}%)`;
-      else if (t.status === 'completed') status = ' (완료)';
-      return `${t.title} ${t.start_time}~${t.end_time}${status}`;
-    })
+    .map((t) => `${t.title} ${t.start_time}~${t.end_time}`)
     .join('\n');
 
-  const userPrompt = `사용자가 "${completedTask.title}" 태스크를 ${progress}% 진행했습니다.
-현재 시간: ${currentTime}
-남은 시간을 고려하여 나머지 일정을 재조정해주세요.
+  const userPrompt = `
+현재시간: ${currentTime}
 
-현재 시간표:
 ${taskInfo}
 
-루틴 (고정):
-${dayRoutines.map((r) => `${r.title}: ${r.start_time}~${r.end_time}`).join('\n') || '없음'}
+남은 일정 재배치.
+겹치지 않게.
+3개 옵션 생성.
+`;
 
-완료된 태스크는 그대로 두고, 미완료 태스크들의 시간을 현재 시간 이후로 재배치.
-3개의 옵션을 options 배열에 넣어주세요.
-
-반드시 JSON만: {"options":[[],[],[]]}`;
-
-  const parsed = await invokeOpenAIJson(
-    'You output only valid JSON. Each inner array is a full day schedule row list with start_time, end_time, estimated_minutes, title, is_routine, status.',
-    userPrompt
+  const parsed = await invokeGeminiJson(
+    'Reschedule tasks.',
+    userPrompt,
+    rescheduleSchema
   );
 
   if (parsed?.options?.length >= 3) {
-    return parsed.options;
+    return parsed.options.map(normalizeSchedule);
   }
 
   return heuristicRescheduleOptions(
@@ -159,30 +279,26 @@ ${dayRoutines.map((r) => `${r.title}: ${r.start_time}~${r.end_time}`).join('\n')
   );
 }
 
+/* =========================
+   📝 하루 요약
+========================= */
 export async function generateDaySummary(tasks) {
   const completed = tasks.filter((t) => t.status === 'completed');
-  const incomplete = tasks.filter((t) => t.status !== 'completed' && !t.is_routine);
 
-  const userPrompt = `오늘 하루를 요약해주세요.
+  const userPrompt = `
+완료:
+${completed.map((t) => t.title).join('\n') || '없음'}
 
-완료한 일:
-${completed.map((t) => `- ${t.title}`).join('\n') || '없음'}
+짧은 요약 작성
+`;
 
-못 마친 일:
-${incomplete.map((t) => `- ${t.title} (진행률: ${t.progress || 0}%)`).join('\n') || '없음'}
-
-따뜻하고 응원하는 톤으로 2-3문장. 한국어.
-
-JSON 형식: {"summary":"..."}`;
-
-  const parsed = await invokeOpenAIJson(
-    'You reply with JSON {"summary": string} only.',
-    userPrompt
+  const parsed = await invokeGeminiJson(
+    'Return JSON summary.',
+    userPrompt,
+    summarySchema
   );
 
-  if (typeof parsed?.summary === 'string' && parsed.summary.trim()) {
-    return parsed.summary.trim();
-  }
+  if (parsed?.summary) return parsed.summary;
 
   return heuristicDaySummary(tasks);
 }
