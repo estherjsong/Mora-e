@@ -1,10 +1,11 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { CalendarDays, RotateCw } from 'lucide-react';
+import { CalendarDays, RotateCw, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { path: '/', icon: CalendarDays, label: '홈' },
   { path: '/routines', icon: RotateCw, label: '루틴 관리' },
+  { path: '/statistics', icon: BarChart3, label: '통계' },
 ];
 
 export default function AppLayout() {

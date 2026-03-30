@@ -8,6 +8,7 @@ import { AuthProvider } from '@/lib/AuthContext';
 import AppLayout from '@/components/layout/AppLayout';
 import Home from '@/pages/Home';
 import Routines from '@/pages/Routines';
+import Statistics from '@/pages/Statistics';
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
             <Route element={<AppLayout />}>
               <Route path="/" element={<Home />} />
               <Route path="/routines" element={<Routines />} />
+              <Route path="/statistics" element={<Statistics />} />
             </Route>
             <Route path="*" element={<PageNotFound />} />
           </Routes>
