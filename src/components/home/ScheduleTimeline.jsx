@@ -24,6 +24,7 @@ export default function ScheduleTimeline({
   selectedDate,
   onCarryOver,
   isPast,
+  onTaskClick,
 }) {
   const containerRef = useRef(null);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -84,10 +85,16 @@ export default function ScheduleTimeline({
           return (
             <div
               key={task.id || idx}
+              onClick={() => {
+                if (!task.is_routine && !task.is_google_calendar && onTaskClick) {
+                  onTaskClick(task);
+                }
+              }}
               className={cn(
                 "absolute left-14 right-2 rounded-lg border px-3 py-1.5 transition-all overflow-hidden",
                 color.bg, color.border,
                 isIncomplete && !isCarriedOver && "opacity-40 grayscale",
+                !task.is_routine && !task.is_google_calendar && "cursor-pointer hover:ring-2 ring-primary/40 shadow-sm hover:shadow-md hover:z-20"
               )}
               style={{ top, height: Math.max(height - 2, 26) }}
             >

@@ -120,6 +120,25 @@ export default function DailySchedulePanel({
     setMode('edit');
   };
 
+  // 시간표의 할 일 블록을 클릭했을 때 알림창을 띄우는 핸들러
+  const handleTaskClick = (task) => {
+    const now = new Date();
+    const nowMins = now.getHours() * 60 + now.getMinutes();
+    const [sh, sm] = (task.start_time || '').split(':').map(Number);
+    const startMins = sh * 60 + sm;
+
+    let type = 'end'; // 기본적으로 진행률 체크(마무리) 알림
+    if (!isPast && (!isToday || startMins > nowMins)) {
+      type = 'start'; // 오늘 미래의 일정이거나 다가오는 날짜면 시작 알림
+    }
+    setNotification({ type, task });
+  };
+
+  const handleStartTask = (task) => {
+    onUpdateTask(task.id, { status: 'in_progress' });
+    setNotification(null);
+  };
+
   const handleGenerate = async () => {
     setIsGenerating(true);
     const options = await generateScheduleOptions(
@@ -246,6 +265,7 @@ export default function DailySchedulePanel({
             selectedDate={selectedDate}
             isPast={isPast}
             onCarryOver={isPast ? handleCarryOverNav : undefined}
+            onTaskClick={handleTaskClick}
           />
           {isPast && <PastDayLog log={dailyLog} />}
         </>
@@ -299,11 +319,13 @@ export default function DailySchedulePanel({
       <AnimatePresence>
         {notification && (
           <TaskNotification
+            key={`${notification.task.id}_${notification.type}`}
             type={notification.type}
             task={notification.task}
             onDismiss={() => setNotification(null)}
             onProgressSelect={handleProgressSelect}
             onReschedule={handleReschedule}
+            onStart={() => handleStartTask(notification.task)}
           />
         )}
       </AnimatePresence>

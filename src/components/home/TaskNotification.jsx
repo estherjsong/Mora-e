@@ -18,8 +18,13 @@ export default function TaskNotification({
   onDismiss,
   onProgressSelect,
   onReschedule,
+  onStart,
 }) {
-  const [selectedProgress, setSelectedProgress] = useState(null);
+  const [selectedProgress, setSelectedProgress] = useState(() => {
+    if (task.progress !== undefined && task.progress !== null) return task.progress;
+    if (task.status === 'completed') return 100;
+    return null;
+  });
   const [showReschedule, setShowReschedule] = useState(false);
 
   const handleProgressSelect = (val) => {
@@ -54,7 +59,7 @@ export default function TaskNotification({
           </div>
           <div>
             <p className="text-xs text-muted-foreground">
-              {type === 'start' ? '시작할 시간이에요!' : '마무리할 때에요!'}
+              {type === 'start' ? '지금 시작할까요?' : '마무리할 때에요!'}
             </p>
           </div>
         </div>
@@ -66,9 +71,15 @@ export default function TaskNotification({
       <p className="text-sm font-semibold mb-3">{task.title}</p>
 
       {type === 'start' && (
-        <p className="text-xs text-muted-foreground">
-          {task.start_time} – {task.end_time}
-        </p>
+        <div>
+          <p className="text-xs text-muted-foreground mb-4">
+            {task.start_time} – {task.end_time}
+          </p>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={onDismiss} className="flex-1">아니요</Button>
+            <Button size="sm" onClick={onStart} className="flex-1">시작하기</Button>
+          </div>
+        </div>
       )}
 
       {type === 'end' && !showReschedule && (
